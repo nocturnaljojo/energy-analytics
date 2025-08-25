@@ -8,8 +8,11 @@ export default function Home() {
 
   return (
     <div className="flex h-screen bg-gray-950">
-      <div className="w-1/3 border-r border-gray-800">
-        <GeneratorList onSelectGenerator={setSelectedGenerator} />
+      <div className="w-1/3 min-w-[300px] border-r border-gray-800">
+        <GeneratorList 
+          onSelectGenerator={setSelectedGenerator}
+          selectedGenerator={selectedGenerator}
+        />
       </div>
       
       <div className="flex-1 p-8 overflow-y-auto">
