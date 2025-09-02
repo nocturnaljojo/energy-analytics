@@ -10,6 +10,7 @@ import { Calendar, Clock, RefreshCw, DollarSign, Zap, TrendingUp } from 'lucide-
 
 interface PowerChartProps {
   generatorDuid: string
+  onDateRangeChange?: (range: string) => void // Added this prop
 }
 
 interface ChartData {
@@ -27,7 +28,7 @@ interface GeneratorInfo {
   fuel_source: string | null
 }
 
-export default function PowerChart({ generatorDuid }: PowerChartProps) {
+export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerChartProps) {
   const [data, setData] = useState<ChartData[]>([])
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('24h')
@@ -51,6 +52,17 @@ export default function PowerChart({ generatorDuid }: PowerChartProps) {
       return () => clearInterval(interval)
     }
   }, [generatorDuid, dateRange, startDate, endDate, autoRefresh])
+
+  // NEW: Handler for date range changes that syncs with parent
+  const handleDateRangeChange = (range: string) => {
+    console.log('PowerChart: Date range changed to', range)
+    setDateRange(range)
+    
+    // CRITICAL: Call parent callback to sync with RevenueLeaderboard
+    if (onDateRangeChange) {
+      onDateRangeChange(range)
+    }
+  }
 
   const fetchGeneratorInfo = async () => {
     const { data, error } = await supabase
@@ -309,10 +321,10 @@ export default function PowerChart({ generatorDuid }: PowerChartProps) {
         </div>
       </div>
       
-      {/* Date Range Selector */}
+      {/* Date Range Selector - UPDATED to use handleDateRangeChange */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => setDateRange('24h')}
+          onClick={() => handleDateRangeChange('24h')} // FIXED: Now calls handleDateRangeChange
           className={`px-4 py-2 rounded-lg transition-colors ${
             dateRange === '24h' 
               ? 'bg-blue-600 text-white' 
@@ -322,7 +334,7 @@ export default function PowerChart({ generatorDuid }: PowerChartProps) {
           24 Hours
         </button>
         <button
-          onClick={() => setDateRange('7d')}
+          onClick={() => handleDateRangeChange('7d')} // FIXED: Now calls handleDateRangeChange
           className={`px-4 py-2 rounded-lg transition-colors ${
             dateRange === '7d' 
               ? 'bg-blue-600 text-white' 
@@ -332,7 +344,7 @@ export default function PowerChart({ generatorDuid }: PowerChartProps) {
           7 Days
         </button>
         <button
-          onClick={() => setDateRange('30d')}
+          onClick={() => handleDateRangeChange('30d')} // FIXED: Now calls handleDateRangeChange
           className={`px-4 py-2 rounded-lg transition-colors ${
             dateRange === '30d' 
               ? 'bg-blue-600 text-white' 
