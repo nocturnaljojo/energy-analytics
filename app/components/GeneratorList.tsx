@@ -365,7 +365,7 @@ export default function GeneratorList({
                     </div>
                     <div className="text-right">
                       <div className="text-sm font-medium">
-                        {gen.latest_mw !== null ? `${gen.latest_mw.toFixed(1)} MW` : '-'}
+                        {gen.latest_mw != null ? `${gen.latest_mw.toFixed(1)} MW` : '-'}
                       </div>
                       <div className="text-xs text-gray-500">
                         Cap: {gen.reg_cap_generation?.toFixed(0) || '-'} MW
