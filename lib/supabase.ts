@@ -19,7 +19,7 @@ export async function testConnection() {
       console.error('Supabase error details:', testError)
       
       // Try a simpler query - just list tables
-      const { data: tables, error: tableError } = await supabase
+      const { error: tableError } = await supabase
         .rpc('get_tables', {})
         .single()
       

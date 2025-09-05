@@ -2,15 +2,15 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, 
+  Line, XAxis, YAxis, CartesianGrid, 
   Tooltip, Legend, ResponsiveContainer, Area, ComposedChart 
 } from 'recharts'
 import { format, subHours, subDays } from 'date-fns'
-import { Calendar, Clock, RefreshCw, DollarSign, Zap, TrendingUp } from 'lucide-react'
+import { Clock, RefreshCw, DollarSign, Zap, TrendingUp } from 'lucide-react'
 
 interface PowerChartProps {
   generatorDuid: string
-  onDateRangeChange?: (range: string) => void // Added this prop
+  onDateRangeChange?: (range: string) => void
 }
 
 interface ChartData {
@@ -28,12 +28,24 @@ interface GeneratorInfo {
   fuel_source: string | null
 }
 
+// Define proper types for the CustomTooltip
+interface TooltipPayload {
+  payload: ChartData
+  value: number
+  name: string
+}
+
+interface CustomTooltipProps {
+  active?: boolean
+  payload?: TooltipPayload[]
+  label?: string
+}
+
 export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerChartProps) {
   const [data, setData] = useState<ChartData[]>([])
   const [loading, setLoading] = useState(true)
   const [dateRange, setDateRange] = useState('24h')
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  // Removed unused state variables
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [generatorInfo, setGeneratorInfo] = useState<GeneratorInfo | null>(null)
   const [totals, setTotals] = useState({
@@ -43,29 +55,8 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
     dataPoints: 0
   })
 
-  useEffect(() => {
-    fetchGeneratorInfo()
-    fetchCombinedData()
-    
-    if (autoRefresh) {
-      const interval = setInterval(fetchCombinedData, 60000)
-      return () => clearInterval(interval)
-    }
-  }, [generatorDuid, dateRange, startDate, endDate, autoRefresh])
-
-  // NEW: Handler for date range changes that syncs with parent
-  const handleDateRangeChange = (range: string) => {
-    console.log('PowerChart: Date range changed to', range)
-    setDateRange(range)
-    
-    // CRITICAL: Call parent callback to sync with RevenueLeaderboard
-    if (onDateRangeChange) {
-      onDateRangeChange(range)
-    }
-  }
-
   const fetchGeneratorInfo = async () => {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('nem_generators')
       .select('duid, station_name, region, fuel_source_primary')
       .eq('duid', generatorDuid)
@@ -86,7 +77,7 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
     
     // Calculate date range
     let fromDate = new Date()
-    let toDate = new Date()
+    const toDate = new Date()
     
     switch(dateRange) {
       case '24h':
@@ -99,10 +90,7 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
         fromDate = subDays(toDate, 30)
         break
       case 'custom':
-        if (startDate && endDate) {
-          fromDate = new Date(startDate)
-          toDate = new Date(endDate)
-        }
+        // Custom date range logic removed since startDate/endDate were unused
         break
     }
     
@@ -217,8 +205,30 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
     setLoading(false)
   }
 
-  // Custom tooltip
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  useEffect(() => {
+    fetchGeneratorInfo()
+    fetchCombinedData()
+    
+    if (autoRefresh) {
+      const interval = setInterval(fetchCombinedData, 60000)
+      return () => clearInterval(interval)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [generatorDuid, dateRange, autoRefresh])
+
+  // Handler for date range changes that syncs with parent
+  const handleDateRangeChange = (range: string) => {
+    console.log('PowerChart: Date range changed to', range)
+    setDateRange(range)
+    
+    // Call parent callback to sync with RevenueLeaderboard
+    if (onDateRangeChange) {
+      onDateRangeChange(range)
+    }
+  }
+
+  // Custom tooltip with proper typing
+  const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       return (
@@ -321,10 +331,10 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
         </div>
       </div>
       
-      {/* Date Range Selector - UPDATED to use handleDateRangeChange */}
+      {/* Date Range Selector */}
       <div className="flex flex-wrap gap-2">
         <button
-          onClick={() => handleDateRangeChange('24h')} // FIXED: Now calls handleDateRangeChange
+          onClick={() => handleDateRangeChange('24h')}
           className={`px-4 py-2 rounded-lg transition-colors ${
             dateRange === '24h' 
               ? 'bg-blue-600 text-white' 
@@ -334,7 +344,7 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
           24 Hours
         </button>
         <button
-          onClick={() => handleDateRangeChange('7d')} // FIXED: Now calls handleDateRangeChange
+          onClick={() => handleDateRangeChange('7d')}
           className={`px-4 py-2 rounded-lg transition-colors ${
             dateRange === '7d' 
               ? 'bg-blue-600 text-white' 
@@ -344,7 +354,7 @@ export default function PowerChart({ generatorDuid, onDateRangeChange }: PowerCh
           7 Days
         </button>
         <button
-          onClick={() => handleDateRangeChange('30d')} // FIXED: Now calls handleDateRangeChange
+          onClick={() => handleDateRangeChange('30d')}
           className={`px-4 py-2 rounded-lg transition-colors ${
             dateRange === '30d' 
               ? 'bg-blue-600 text-white' 
