@@ -49,7 +49,7 @@ export default function GeneratorList({
   }
 
   // Fuel type configurations
-  const fuelConfig: Record<string, { icon: JSX.Element, color: string }> = {
+  const fuelConfig: Record<string, { icon: React.ReactElement, color: string }> = {
     'Solar': { icon: <Sun className="w-3 h-3" />, color: 'bg-yellow-500 hover:bg-yellow-600' },
     'Wind': { icon: <Wind className="w-3 h-3" />, color: 'bg-sky-500 hover:bg-sky-600' },
     'Battery Storage': { icon: <Battery className="w-3 h-3" />, color: 'bg-emerald-500 hover:bg-emerald-600' },
