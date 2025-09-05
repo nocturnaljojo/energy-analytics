@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { subHours, subDays } from 'date-fns'
-import { TrendingUp, Award, DollarSign, Zap, Wind, Sun, Battery, Flame, Droplets, Crown, BarChart3, Target } from 'lucide-react'
+import { Award, Zap, Wind, Sun, Battery, Flame, Droplets, Crown, BarChart3 } from 'lucide-react'
 
 interface PerformanceData {
   duid: string
@@ -20,6 +20,19 @@ interface PerformanceData {
   revenue_intensity: number
   max_possible_mwh: number
   performance_score: number
+}
+
+interface PerformanceEntry {
+  duid: string
+  station_name: string | null
+  participant: string | null
+  region: string
+  fuel_source: string | null
+  max_capacity: number
+  total_revenue: number
+  total_mwh: number
+  data_points: number
+  scada_sum: number
 }
 
 interface PerformanceLeaderboardProps {
@@ -41,16 +54,6 @@ export default function PerformanceLeaderboard({
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const [hoverTimeout, setHoverTimeout] = useState<NodeJS.Timeout | null>(null)
 
-  useEffect(() => {
-    fetchPerformanceData()
-  }, [selectedRegions, selectedFuelTypes, dateRange])
-
-  useEffect(() => {
-    if (performanceData.length > 0) {
-      sortPerformanceData()
-    }
-  }, [sortBy])
-
   const sortPerformanceData = () => {
     const sortedData = [...performanceData].sort((a, b) => {
       switch(sortBy) {
@@ -64,36 +67,6 @@ export default function PerformanceLeaderboard({
     setPerformanceData(sortedData)
   }
 
-  const handleMouseEnter = (item: PerformanceData, event: React.MouseEvent) => {
-    const timeout = setTimeout(() => {
-      setHoveredItem(item)
-      setTooltipPosition({ x: event.clientX, y: event.clientY })
-    }, 2000)
-    setHoverTimeout(timeout)
-  }
-
-  const handleMouseLeave = () => {
-    if (hoverTimeout) {
-      clearTimeout(hoverTimeout)
-      setHoverTimeout(null)
-    }
-    setHoveredItem(null)
-  }
-
-  const handleMouseMove = (event: React.MouseEvent) => {
-    if (hoveredItem) {
-      setTooltipPosition({ x: event.clientX, y: event.clientY })
-    }
-  }
-
-  useEffect(() => {
-    return () => {
-      if (hoverTimeout) {
-        clearTimeout(hoverTimeout)
-      }
-    }
-  }, [hoverTimeout])
-
   const fetchPerformanceData = async () => {
     setLoading(true)
     setError(null)
@@ -102,7 +75,7 @@ export default function PerformanceLeaderboard({
     try {
       // Use IDENTICAL date calculation logic as PowerChart
       let fromDate = new Date()
-      let toDate = new Date()
+      const toDate = new Date() // Changed from let to const
       let hours = 0
       
       switch(dateRange) {
@@ -205,7 +178,7 @@ export default function PerformanceLeaderboard({
         return
       }
 
-      const performanceMap = new Map<string, any>()
+      const performanceMap = new Map<string, PerformanceEntry>() // Added proper type instead of any
 
       // Use IDENTICAL aggregation logic as PowerChart
       revenueRecords.forEach(record => {
@@ -229,11 +202,13 @@ export default function PerformanceLeaderboard({
         }
 
         const entry = performanceMap.get(record.duid)
-        // CRITICAL: Use identical revenue aggregation as PowerChart
-        entry.total_revenue += (record.revenue_5min || 0)
-        entry.scada_sum += (record.scada_mw || 0)
-        entry.data_points += 1
-        entry.total_mwh += ((record.scada_mw || 0) / 12)
+        if (entry) {
+          // CRITICAL: Use identical revenue aggregation as PowerChart
+          entry.total_revenue += (record.revenue_5min || 0)
+          entry.scada_sum += (record.scada_mw || 0)
+          entry.data_points += 1
+          entry.total_mwh += ((record.scada_mw || 0) / 12)
+        }
       })
 
       console.log('Aggregated performance data for', performanceMap.size, 'generators')
@@ -288,8 +263,8 @@ export default function PerformanceLeaderboard({
       console.log('=== END DEBUG ===')
 
       const filteredData = allPerformance.filter(entry => {
-        let includeRegion = selectedRegions.length === 0 || selectedRegions.includes(entry.region || '')
-        let includeFuel = selectedFuelTypes.length === 0 || selectedFuelTypes.includes(entry.fuel_source || '')
+        const includeRegion = selectedRegions.length === 0 || selectedRegions.includes(entry.region || '') // Changed to const
+        const includeFuel = selectedFuelTypes.length === 0 || selectedFuelTypes.includes(entry.fuel_source || '') // Changed to const
         return includeRegion && includeFuel
       })
 
@@ -304,6 +279,48 @@ export default function PerformanceLeaderboard({
     
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchPerformanceData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRegions, selectedFuelTypes, dateRange])
+
+  useEffect(() => {
+    if (performanceData.length > 0) {
+      sortPerformanceData()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sortBy, performanceData.length])
+
+  const handleMouseEnter = (item: PerformanceData, event: React.MouseEvent) => {
+    const timeout = setTimeout(() => {
+      setHoveredItem(item)
+      setTooltipPosition({ x: event.clientX, y: event.clientY })
+    }, 2000)
+    setHoverTimeout(timeout)
+  }
+
+  const handleMouseLeave = () => {
+    if (hoverTimeout) {
+      clearTimeout(hoverTimeout)
+      setHoverTimeout(null)
+    }
+    setHoveredItem(null)
+  }
+
+  const handleMouseMove = (event: React.MouseEvent) => {
+    if (hoveredItem) {
+      setTooltipPosition({ x: event.clientX, y: event.clientY })
+    }
+  }
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeout) {
+        clearTimeout(hoverTimeout)
+      }
+    }
+  }, [hoverTimeout])
 
   const getFuelIcon = (fuelType: string | null) => {
     if (!fuelType) return <Zap className="w-4 h-4 text-gray-400" />
